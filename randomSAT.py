@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import random
-from dimacs import printDIMACS
+from dimacs import writeDIMACS
 from util import countSAT
 
 def addClauses(population,sln,number,satCount,cnf):
@@ -40,7 +40,7 @@ def randomSAT(k,n,ofile=None):
     cnf = addClauses(population,sln,sat1,1,cnf)
     cnf = addClauses(population,sln,sat2,2,cnf)
     cnf = addClauses(population,sln,sat3,3,cnf)
-    printDIMACS(k,n,cnf,sln,filename=ofile)
+    writeDIMACS(k,n,cnf,sln,filename=ofile)
 
 def main():
     parser = argparse.ArgumentParser(description="Random satisfiable 3-SAT")
