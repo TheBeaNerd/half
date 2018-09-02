@@ -1,0 +1,20 @@
+  How about we experiment with some "simple" examples?
+
+  It would be nice to see if the probabilities actually suggest "good" choices.
+
+  Regarding shortest paths,
+
+    The length of a shortest path from (a -> !a) that goes thru x must also go thu !x.
+    
+    If   (a ->  x) requires n steps
+    and  (a -> !x) requires m steps
+    then (a -> !a) thru x requires (n + m) steps
+
+    Note: to compute this we need to track the shortest depth to each (x)
+
+  My suggestion would be:
+    o levelize the reachability sets
+    o don't expand !x if you have seen x
+
+  So, a fixpoint graph isn't the most useful for this.
+
