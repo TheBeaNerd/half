@@ -2,10 +2,7 @@
 import argparse
 import random
 from dimacs import printDIMACS
-
-def countSAT(clause,sln):
-    hits = [1 if c in sln else 0 for c in clause]
-    return sum(hits)
+from util import countSAT
 
 def addClauses(population,sln,number,satCount,cnf):
     for i in range(0,number):
