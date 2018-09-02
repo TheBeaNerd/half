@@ -44,8 +44,8 @@ def randomSAT(k,n,ofile=None):
 
 def main():
     parser = argparse.ArgumentParser(description="Random satisfiable 3-SAT")
-    parser.add_argument('-n', '--clauses', help="Number of clauses [426]")
-    parser.add_argument('-k', '--variables', help="Number of variables [100]")
+    parser.add_argument('-k', '--clauses', help="Number of clauses [426]")
+    parser.add_argument('-n', '--variables', help="Number of variables [100]")
     parser.add_argument('-o', '--output', help="Output filename [stdout]")
     parser.set_defaults(clauses='426')
     parser.set_defaults(variables='100')
