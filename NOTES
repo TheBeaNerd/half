@@ -18,3 +18,194 @@
 
   So, a fixpoint graph isn't the most useful for this.
 
+--------------------------------------------------------
+
+ +-------++-----+-----+-----++-----+-----+-----+-----+-----+-----++
+ | x y z || x+y | y+z | x+z || x=y | y=z | x=z | x^y | y^z | x^z || 
+ +-------++-----+-----+-----++-----+-----+-----+-----+-----+-----++
+ | 0 0 0 ||     |     |     ||     |     |     |     |     |     ||
+ +-------++-----+-----+-----++-----+-----+-----+-----+-----+-----++
+ | 0 0 1 ||     |  x  |  x  ||  x  |     |     |     |  x  |  x  || 1/7
+ | 0 1 0 ||  x  |  x  |     ||     |     |  x  |  x  |  x  |     || 1/7
+ | 0 1 1 ||  x  |  x  |  x  ||     |  x  |     |  x  |     |  x  || 1/7
+ | 1 0 0 ||  x  |     |  x  ||     |  x  |     |  x  |     |  x  || 
+ | 1 0 1 ||  x  |  x  |  x  ||     |     |  x  |  x  |  x  |     ||
+ | 1 1 0 ||  x  |  x  |  x  ||  x  |     |     |     |  x  |  x  ||
+ | 1 1 1 ||  x  |  x  |  x  ||  x  |  x  |  x  |     |     |     ||
+ +-------++-----+-----+-----++-----+-----+-----+-----+-----+-----++
+
+  What percentage of the time is it true?
+  What percentage of the time is if false?
+
+ 1 - (3/7)(3/7) = 1 - 9/49 = (49 - 9)/49 = 40/49
+
+ P(!x) = P1 + P2 + P3
+ P( x) =                P4 + P5 + P6 + P7
+ P(!y) = P1 +           P4 + P5
+ P( y) =      P2 + P3           + P6 + P7
+ P(!z) =      P2      + P4      + P6
+ P( z) = P1      + P3      + P5      + P7
+
+ +----+----++----+----++----+----+
+ | Px | Qx || Py | Qy || Pz | Qz |
+ +----+----++----+----++----+----+
+ |  x | !x ||  y | !y ||  z | !z |
+ +----+----++----+----++----+----+
+
+  If variable x appears true N times and negated M times, what is the initial probability that x is true? false?
+
+  (x + a + b)(!x + c + d)(x + e + f) * P
+
+  (x = T) =>        (c + d) * P  = (6/7)^M
+  (x = F) => (a + b)(e + f) * P  = (6/7)^N
+
+  ;; Well .. not really .. I think the prior needs to be 1/2 because
+  ;; x appears both true and negated .. perhaps that shows up here
+  ;; somewhere .. ?
+
+  P( x) = 4/7
+  P(!x) = 3/7
+
+                  P(E|H)P(H)
+  P(H|E) = -------------------------
+           P(E|H)P(H) + P(E|!H)P(!H)
+
+
+So it looks like we can update the variable probabilities as follows:
+
+                 (6/7)^M(4/7)
+  P'(x) = = ---------------------------
+            (6/7)^M(4/7) + (6/7)^N(3/7)
+
+                 (6/7)^N(3/7)
+  P'(!x) = ---------------------------
+            (6/7)^N(3/7) + (6/7)^M(4/7)
+
+.. of course, one might be tempted to do this more than once.
+.. any chance it would converge towards reasonable values?
+
+;; Is it any more than "re-baising" .. proportionally to the
+;; number of remaining solutions?
+
+  So, every time you make a choice, you change the probability of
+  every other variable.  
+
+ +-------++-----+-----+-----++-----+-----+-----+-----+-----+-----++
+ | x y z || x+y | y+z | x+z || x=y | y=z | x=z | x^y | y^z | x^z || 
+ +-------++-----+-----+-----++-----+-----+-----+-----+-----+-----++
+ | 0 0 0 ||     |     |     ||     |     |     |     |     |     ||
+ +-------++-----+-----+-----++-----+-----+-----+-----+-----+-----++
+ | 0 0 1 ||     |  x  |  x  ||  x  |     |     |     |  x  |  x  ||
+ | 0 1 0 ||  x  |  x  |     ||     |     |  x  |  x  |  x  |     ||
+ | 0 1 1 ||  x  |  x  |  x  ||     |  x  |     |  x  |     |  x  ||
+ | 1 0 0 ||  x  |     |  x  ||     |  x  |     |  x  |     |  x  ||
+ | 1 0 1 ||  x  |  x  |  x  ||     |     |  x  |  x  |  x  |     ||
+ | 1 1 0 ||  x  |  x  |  x  ||  x  |     |     |     |  x  |  x  ||
+ | 1 1 1 ||  x  |  x  |  x  ||  x  |  x  |  x  |     |     |     ||
+ +-------++-----+-----+-----++-----+-----+-----+-----+-----+-----++
+
+ E = (x + a + b)(x + c + d)(!x + e + f) ...
+
+ (E|H1) =        (e + f) ...
+
+ (E|H2) = (a + b)(c + d) ...
+
+                   P(E|H1)P(H1)                        (3/4)(1/2)
+  P(H1|E) = --------------------------- =       -------------------------- = 0.57
+            P(E|H1)P(H1) + P(E|H2)P(H2)         (3/4)(1/2)  + (3/4)^2(1/2)        
+
+                   P(E|H2)P(H2)                        (3/4)^2(1/2)                 
+  P(H2|E) = --------------------------- =       -------------------------- = 0.42
+            P(E|H2)P(H2) + P(E|H1)P(H1)         (3/4)^2(1/2)  + (3/4)(1/2)        
+
+def pTF(n,m):
+    return ((3.0/4.0)**n)/(((3.0/4.0)**n) + ((3.0/4.0)**m))
+
+-------------------------------------------------------------
+
+  Given a clause (x + y + z) we can compute an initial statistical
+likelyhood for each variable.  What we want to do is reduce it to
+a clause of the form (a + b).  We do this by dropping the variable
+least likely to be true.  
+
+  I think we can evaluate an early phase of this process by weighting
+the contribution of the least likely term .. essentially strengthening
+the constraint.
+
+  (x + y + z) -> (x + y) if P(z) << 1 .. which means it doesn't 
+contribute to z (?)
+
+  1 - (1 - x)(1 - y)(1 - z)
+
+ (x + y + z)
+
+def tryit(x):
+    res = 1.0
+    for v in x:
+      res *= v*(1-v)
+    return math.sqrt(res)
+
+  The issue arises when we don't have confidence that 
+
+
+ (x + a + b)(x + c + d)(!x + e + f)
+
+ (x + a + b)
+
+  x=F in 3 of 7 possible instances
+  x=T in 4 of 7 possible instances
+
+ (x=T) V.abcdef: (e + f)        = (2^2) * (2^2) * (3)
+ (x=F) V.abcdef: (a + b)(c + d) = (2^2) *  (3)  * (3)
+
+               2^2 * 2^2 * 3                 2^2        4
+ P(x) = ------------------------------ = ----------- = ---
+        2^2 * 2^2 * 3 +  2^2 * 3  * 3      2^2 + 3      7
+
+                 2^2 * 3 * 3                  3          3
+ P(!x) = ------------------------------ = ----------- = ---
+        2^2 * 2^2 * 3 +  2^2 * 3  * 3      2^2 + 3       7
+
+            1
+ P =    ---------     
+              P1
+         1 + ----
+              P2
+
+ (1 - x)(1 - a)(1 - b)(1 - ab)
+
+       q (1-q)
+  p
+(1-p)
+
+  = pq + p(1-q) + q(1-p) + (1-q)(1-p)
+  = pq  p -pq q -qp 1 -q -p + pq
+  = p q 1 -q -p
+  = 1
+
+                    P(E|H1)P(H1)        
+  P(H1|E) = --------------------------- 
+            P(E|H1)P(H1) + P(E|H2)P(H2) 
+
+                    1.0
+  P(H1|E) = --------------------
+                     P(E|H2) P(H2)
+              1.0 + -------- -----
+                     P(E|H1) P(H1)
+
+  Yeah .. so clearly, once P(H1) or P(H2) saturate there is little one can do to move them.
+
+  If each clause in P(E|x) is weighted the same, the weights will cancel each other out.
+
+  Makes me wonder if saturation would help ..
+
+  .. alternatively, one could bias between "we are really unsure" and "we are really sure" .. with
+the former driving P(H2)/P(H1) to 1.0 and the latter d
+
+  (p - 0.5)*g + 0.5
+
+  
+
+  P(H2) = P(H2)*g + 0.5*(1 - g)
+
+  Where "g" is a confidence factor.

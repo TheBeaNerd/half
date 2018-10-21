@@ -5,4 +5,4 @@ def countSAT(clause,sln):
 
 def isSAT(clause,sln):
     hits = [c in sln for c in clause]
-    return True in hits
+    return any(hits)
