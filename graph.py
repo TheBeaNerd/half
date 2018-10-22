@@ -124,10 +124,11 @@ class igraph(dict):
         (n2,p2) = self.ipaths((- var),n)
         #print('{} - {} -> {}'.format((- var),var,n2))
         if (p1 and p2):
-            return (0,p1.merge(p2))
+            #print('{} |- {} -> {}'.format(var,n1+n2,(- var)))
+            return (0,n1+n2,p1.merge(p2))
         if p1:
-            return((- var),igraph())
-        return(var,igraph())
+            return((- var),0,igraph())
+        return(var,0,igraph())
         
 def main():
     x = igraph()
