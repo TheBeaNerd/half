@@ -1,6 +1,130 @@
 #!/usr/bin/env python
 from util import isSAT
 
+## So we start with [[a,b,c][a,x,y][-a,p,q][j,k]] which is in and/or order.
+## We produce [a [[b,c][x,y]]][-a [[p,q]]][j,k]] which is in and/or/and/or order.
+def stats(cnf):
+    res = {}
+    maxvar = 0
+    maxcnt = 0
+    for clause in cnf:
+        for var in clause:
+            avar = abs(var)
+            hits = res.get(avar,0)
+            hits += 1
+            if (hits > maxcnt):
+                maxcnt = hits
+                maxvar = avar
+            res[avar] = hits
+    return (maxvar,maxcnt)
+
+def factor(cnf):
+    (maxvar,maxcnt) = stats(cnf)
+    if maxcnt < 2:
+        return cnf
+    pclauses = [[var for var in clause if maxvar != var] for clause in cnf if maxvar in clause]
+    nclauses = [[var for var in clause if (- maxvar) != var] for clause in cnf if (- maxvar) in clause]
+    rclauses = [clause for clause in cnf if (((- maxvar) not in clause) and (maxvar not in clause))]
+    res = [[maxvar, factor(pclauses)], [(- maxvar), factor(nclauses)]]
+    res += factor(rclauses)
+    return res
+
+def altop(op):
+    return 'and' if op == 'or' else 'or'
+
+def acl2expr_rec(op,expr):
+    if not isinstance(expr,(list)):
+        return '(var {})'.format(expr)
+    res = '({} '.format(op)
+    for x in expr:
+        res += acl2expr_rec(altop(op),x)
+    res += ')'
+    return res
+
+def acl2expr(expr):
+    return acl2expr_rec('and',expr)
+
+def acl2proof(expr):
+    res = '(defstub var (x) nil)\n'
+    res += '(thm (iff\n   {}\n   {}\n ))\n'.format(acl2expr(expr),acl2expr(factor(expr)))
+    print res
+
+def getp(var,pdist):
+    if var < 0:
+        return 1.0 - pdist.get((- var),0.5)
+    return pdist.get(var,0.5)
+
+def andeval(cnf,pdist):
+    if not isinstance(cnf,(list)):
+        return getp(cnf,pdist)
+    res = 1.0
+    for x in cnf:
+        res *= oreval(x,pdist)
+    return res
+    
+def oreval(dnf,pdist):
+    if not isinstance(dnf,(list)):
+        return getp(dnf,pdist)
+    res = 1.0
+    for x in dnf:
+        res *= (1.0 - andeval(x,pdist))
+    return 1.0 - res
+
+def peval(cnf,pdist):
+    return andeval(factor(cnf),pdist)
+
+def pA_B(A,cnf,pdist):
+    ##
+    ##                 p(B|A)p(A)
+    ## p(A|B) = -------------------------
+    ##          p(B|A)p(A) + p(B|!A)p(!A)
+    ##
+    pclauses = [[var for var in clause if    A  != var] for clause in cnf if    A  in clause]
+    nclauses = [[var for var in clause if (- A) != var] for clause in cnf if (- A) in clause]
+    pB_A  = peval(nclauses,pdist)
+    pB_nA = peval(pclauses,pdist)
+    pA  = getp(A,pdist)
+    pnA = 1.0 - pA
+    return (pB_A * pA)/((pB_A * pA) + (pB_nA * pnA))
+
+def pA(A,cnf,pdist):
+    ##
+    ##            p(B|A)
+    ## p(A) = ----------------
+    ##        p(B|A) + p(B|!A)
+    ##
+    pclauses = [[var for var in clause if    A  != var] for clause in cnf if    A  in clause]
+    nclauses = [[var for var in clause if (- A) != var] for clause in cnf if (- A) in clause]
+    pB_A  = peval(nclauses,pdist)
+    pB_nA = peval(pclauses,pdist)
+    return pB_A/(pB_A + pB_nA)
+
+def init_pdist(keys,cnf):
+    pdist = {}
+    for key in keys:
+        pdist[key] = pA(key,cnf,{})
+    return pdist
+
+def update_pdist(cnf,pdist):
+    ndist = {}
+    for key in pdist.keys():
+        ndist[key] = pA(key,cnf,pdist)
+    return ndist
+
+## example = [[1,2,3],[2,3,4],[3,4,5],[-2,-4,6],[-1,-3,6],[7,8,9]]
+## acl2expr(example)
+## (and (or (var 1)(var 2)(var 3))(or (var 2)(var 3)(var 4))(or (var 3)(var 4)(var 5))(or (var -2)(var -4)(var 6))(or (var -1)(var -3)(var 6))(or (var 7)(var 8)(var 9)))
+## factor(example)
+## [[3, [[2, [[1], [4]]], [-2, []], [4, 5]]], [-3, [[-1, 6]]], [-2, -4, 6], [7, 8, 9]]
+## acl2expr(factor(example))
+## (and (or (var 3)(and (or (var 2)(and (or (var 1))(or (var 4))))(or (var -2)(and ))(or (var 4)(var 5))))(or (var -3)(and (or (var -1)(var 6))))(or (var -2)(var -4)(var 6))(or (var 7)(var 8)(var 9)))
+## (defstub var (x) nil)
+## (thm
+##  (iff
+##    (and (or (var 1)(var 2)(var 3))(or (var 2)(var 3)(var 4))(or (var 3)(var 4)(var 5))(or (var -2)(var -4)(var 6))(or (var -1)(var -3)(var 6))(or (var 7)(var 8)(var 9)))
+##    (and (or (var 3)(and (or (var 2)(and (or (var 1))(or (var 4))))(or (var -2)(and ))(or (var 4)(var 5))))(or (var -3)(and (or (var -1)(var 6))))(or (var -2)(var -4)(var 6))(or (var 7)(var 8)(var 9)))
+##  ))
+
 def p2(x,y):
     return x/(x + y*(1- x))
 
